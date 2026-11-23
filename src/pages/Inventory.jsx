@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
+import Sidebar from '../components/Sidebar';
 import { getItems, saveItems, getLoans, saveLoans } from '../api/mockData';
+// import fetchClient from '../api/fetchClient'; // <-- DESCOMENTAR AL CONECTAR API
 
 const DEPORTES = ['Todo', 'Fútbol', 'Básquetbol', 'Voleibol', 'Otros'];
 
@@ -14,7 +16,24 @@ export default function Inventory() {
   const [cantidad, setCantidad] = useState(1);
   const [cancha, setCancha] = useState('');
 
-  const sesion = JSON.parse(sessionStorage.getItem('sesion_deportes') || '{}');
+  const sesion = JSON.parse(localStorage.getItem('sesion_deportes') || '{}');
+
+  /* =========================================================================
+     CÓDIGO REAL PARA CARGAR INVENTARIO DESDE LA API (DESCOMENTAR ESTE BLOQUE):
+     =========================================================================
+  const cargarInventarioReal = async () => {
+    try {
+      const data = await fetchClient.get('/sports/items');
+      setItems(data);
+    } catch (error) {
+      console.error('Error al cargar inventario:', error.message);
+    }
+  };
+
+  useEffect(() => {
+    cargarInventarioReal();
+  }, []);
+  ========================================================================= */
 
   const filteredItems = items.filter((item) => {
     const matchDeporte = deporte === 'Todo' || item.deporte === deporte;
@@ -25,10 +44,30 @@ export default function Inventory() {
     return matchDeporte && matchDisp && matchSearch;
   });
 
-  const handleRequestLoan = (e) => {
+  const handleRequestLoan = async (e) => {
     e.preventDefault();
     if (!cancha.trim() || cantidad < 1 || cantidad > selectedItem.cantidadDisponible) return;
 
+    /* =========================================================================
+       CÓDIGO REAL PARA REGISTRAR PRÉSTAMO EN LA API (DESCOMENTAR ESTE BLOQUE):
+       =========================================================================
+    try {
+      await fetchClient.post('/sports/loans', {
+        itemId: selectedItem.id,
+        cantidad: Number(cantidad),
+        canchaOActividad: cancha,
+      });
+      await cargarInventarioReal();
+      setSelectedItem(null);
+      setCancha('');
+      setCantidad(1);
+    } catch (error) {
+      alert(error.message || 'No se pudo solicitar el préstamo');
+    }
+    return;
+    ========================================================================= */
+
+    // SIMULACIÓN TEMPORAL SIN BACKEND (Borrar al activar el bloque de arriba)
     const updatedItems = items.map((it) =>
       it.id === selectedItem.id
         ? { ...it, cantidadDisponible: it.cantidadDisponible - cantidad }
@@ -57,151 +96,150 @@ export default function Inventory() {
   };
 
   return (
-    <div>
-      {/* Cabecera: Título + Buscador a la derecha (como en Figma) */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-        <h1>Material Deportivo</h1>
+    <div className="app-layout">
+      <Sidebar />
 
-        <div style={{ position: 'relative', width: 260 }}>
-          <input
-            type="text"
-            className="input-control"
-            style={{ width: '100%', paddingRight: 36, borderRadius: 20 }}
-            placeholder="Buscar..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <Search size={16} style={{ position: 'absolute', right: 14, top: 12, color: '#8C8C8C' }} />
-        </div>
-      </div>
+      <main className="main-content">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+          <h1>Material Deportivo</h1>
 
-      {/* Filtros de disciplina + Checkbox Solo disponibles a la derecha */}
-      <div className="filters-bar">
-        {DEPORTES.map((dep) => (
-          <button
-            key={dep}
-            className={`chip ${deporte === dep ? 'active' : ''}`}
-            style={deporte === dep ? { backgroundColor: '#D07B7B', color: '#FFFFFF' } : {}}
-            onClick={() => setDeporte(dep)}
-          >
-            {dep}
-          </button>
-        ))}
-
-        <label style={{ marginLeft: 'auto', fontSize: 13, display: 'flex', gap: 6, alignItems: 'center', cursor: 'pointer' }}>
-          Solo disponibles
-          <input
-            type="checkbox"
-            checked={soloDisponibles}
-            onChange={(e) => setSoloDisponibles(e.target.checked)}
-          />
-        </label>
-      </div>
-
-      {/* Grid de tarjetas idéntico a Inicio/Usuario de Figma */}
-      <div className="cards-grid">
-        {filteredItems.map((item) => (
-          <div className="item-card" key={item.id}>
-            <div>
-              <h3 style={{ fontSize: 16, fontWeight: 700 }}>{item.nombre}</h3>
-              <span className="item-code">{item.codigo}</span>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0' }}>
-              <span style={{ fontSize: 13 }}>
-                <strong>{item.cantidadDisponible}/{item.cantidadTotal}</strong> Disponibles
-              </span>
-              <span className={`badge badge-${item.estadoFisico.toLowerCase()}`}>
-                {item.estadoFisico}
-              </span>
-            </div>
-
-            <button
-              className="btn btn-primary btn-full"
-              disabled={item.cantidadDisponible === 0}
-              onClick={() => {
-                setSelectedItem(item);
-                setCantidad(1);
-              }}
-            >
-              {item.cantidadDisponible === 0 ? 'Agotado' : 'Solicitar préstamo'}
-            </button>
+          <div style={{ position: 'relative', width: 260 }}>
+            <input
+              type="text"
+              className="input-control"
+              style={{ width: '100%', paddingRight: 36, borderRadius: 20 }}
+              placeholder="Buscar..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <Search size={16} style={{ position: 'absolute', right: 14, top: 12, color: '#8C8C8C' }} />
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Modal Solicitud Préstamo (100% fiel a Solicitud/Usuario de Figma) */}
-      {selectedItem && (
-        <div className="modal-backdrop">
-          <form className="modal-box" onSubmit={handleRequestLoan} style={{ maxWidth: 410 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <h3 style={{ fontSize: 18 }}>Solicitud Préstamo</h3>
+        <div className="filters-bar">
+          {DEPORTES.map((dep) => (
+            <button
+              key={dep}
+              className={`chip ${deporte === dep ? 'active' : ''}`}
+              style={deporte === dep ? { backgroundColor: '#D07B7B', color: '#FFFFFF' } : {}}
+              onClick={() => setDeporte(dep)}
+            >
+              {dep}
+            </button>
+          ))}
+
+          <label style={{ marginLeft: 'auto', fontSize: 13, display: 'flex', gap: 6, alignItems: 'center', cursor: 'pointer' }}>
+            Solo disponibles
+            <input
+              type="checkbox"
+              checked={soloDisponibles}
+              onChange={(e) => setSoloDisponibles(e.target.checked)}
+            />
+          </label>
+        </div>
+
+        <div className="cards-grid">
+          {filteredItems.map((item) => (
+            <div className="item-card" key={item.id}>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700 }}>{item.nombre}</h3>
+                <span className="item-code">{item.codigo}</span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0' }}>
+                <span style={{ fontSize: 13 }}>
+                  <strong>{item.cantidadDisponible}/{item.cantidadTotal}</strong> Disponibles
+                </span>
+                <span className={`badge badge-${item.estadoFisico.toLowerCase()}`}>
+                  {item.estadoFisico}
+                </span>
+              </div>
+
               <button
-                type="button"
-                onClick={() => setSelectedItem(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3C3737' }}
+                className="btn btn-primary btn-full"
+                disabled={item.cantidadDisponible === 0}
+                onClick={() => {
+                  setSelectedItem(item);
+                  setCantidad(1);
+                }}
               >
-                <X size={20} />
+                {item.cantidadDisponible === 0 ? 'Agotado' : 'Solicitar préstamo'}
               </button>
             </div>
+          ))}
+        </div>
 
-            <p style={{ fontSize: 14, fontWeight: 600 }}>
-              {selectedItem.nombre} ({selectedItem.codigo})
-            </p>
-
-            <span className="badge badge-bueno" style={{ margin: '8px 0 18px', padding: '4px 12px' }}>
-              {selectedItem.cantidadDisponible} Disponibles
-            </span>
-
-            {/* Stepper [- 1 +] de Figma */}
-            <div className="input-group">
-              <label>Cantidad</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {selectedItem && (
+          <div className="modal-backdrop">
+            <form className="modal-box" onSubmit={handleRequestLoan} style={{ maxWidth: 410 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <h3 style={{ fontSize: 18 }}>Solicitud Préstamo</h3>
                 <button
                   type="button"
-                  className="btn btn-ghost"
-                  style={{ width: 36, height: 36, padding: 0, border: '1px solid #D1D1D1' }}
-                  onClick={() => setCantidad(Math.max(1, cantidad - 1))}
+                  onClick={() => setSelectedItem(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3C3737' }}
                 >
-                  -
-                </button>
-                <span style={{ fontWeight: 700, fontSize: 16, minWidth: 24, textAlign: 'center' }}>
-                  {cantidad}
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  style={{ width: 36, height: 36, padding: 0, border: '1px solid #D1D1D1' }}
-                  onClick={() => setCantidad(Math.min(selectedItem.cantidadDisponible, cantidad + 1))}
-                >
-                  +
+                  <X size={20} />
                 </button>
               </div>
-            </div>
 
-            <div className="input-group">
-              <label>Cancha o Actividad</label>
-              <input
-                type="text"
-                required
-                placeholder="Ej. Cancha 2 - Torneo Interno"
-                className="input-control"
-                value={cancha}
-                onChange={(e) => setCancha(e.target.value)}
-              />
-            </div>
+              <p style={{ fontSize: 14, fontWeight: 600 }}>
+                {selectedItem.nombre} ({selectedItem.codigo})
+              </p>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
-              <button type="button" className="btn btn-ghost" onClick={() => setSelectedItem(null)}>
-                Cancelar
-              </button>
-              <button type="submit" className="btn btn-success">
-                Confirmar Préstamo
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+              <span className="badge badge-bueno" style={{ margin: '8px 0 18px', padding: '4px 12px' }}>
+                {selectedItem.cantidadDisponible} Disponibles
+              </span>
+
+              <div className="input-group">
+                <label>Cantidad</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ width: 36, height: 36, padding: 0, border: '1px solid #D1D1D1' }}
+                    onClick={() => setCantidad(Math.max(1, cantidad - 1))}
+                  >
+                    -
+                  </button>
+                  <span style={{ fontWeight: 700, fontSize: 16, minWidth: 24, textAlign: 'center' }}>
+                    {cantidad}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ width: 36, height: 36, padding: 0, border: '1px solid #D1D1D1' }}
+                    onClick={() => setCantidad(Math.min(selectedItem.cantidadDisponible, cantidad + 1))}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label>Cancha o Actividad</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Cancha 2 - Torneo Interno"
+                  className="input-control"
+                  value={cancha}
+                  onChange={(e) => setCancha(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
+                <button type="button" className="btn btn-ghost" onClick={() => setSelectedItem(null)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-success">
+                  Confirmar Préstamo
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

@@ -38,40 +38,40 @@ const INITIAL_USERS = [
 ];
 
 export function getItems() {
-  const saved = sessionStorage.getItem('mock_items');
+  const saved = localStorage.getItem('mock_items');
   if (!saved) {
-    sessionStorage.setItem('mock_items', JSON.stringify(INITIAL_ITEMS));
+    localStorage.setItem('mock_items', JSON.stringify(INITIAL_ITEMS));
     return INITIAL_ITEMS;
   }
   return JSON.parse(saved);
 }
 
 export function saveItems(items) {
-  sessionStorage.setItem('mock_items', JSON.stringify(items));
+  localStorage.setItem('mock_items', JSON.stringify(items));
 }
 
 export function getLoans() {
-  const saved = sessionStorage.getItem('mock_loans');
+  const saved = localStorage.getItem('mock_loans');
   if (!saved) {
-    sessionStorage.setItem('mock_loans', JSON.stringify(INITIAL_LOANS));
+    localStorage.setItem('mock_loans', JSON.stringify(INITIAL_LOANS));
     return INITIAL_LOANS;
   }
   return JSON.parse(saved);
 }
 
 export function saveLoans(loans) {
-  sessionStorage.setItem('mock_loans', JSON.stringify(loans));
+  localStorage.setItem('mock_loans', JSON.stringify(loans));
 }
 
 export function getUsers() {
-  const saved = sessionStorage.getItem('mock_users');
+  const saved = localStorage.getItem('mock_users');
   if (!saved) {
-    sessionStorage.setItem('mock_users', JSON.stringify(INITIAL_USERS));
+    localStorage.setItem('mock_users', JSON.stringify(INITIAL_USERS));
     return INITIAL_USERS;
   }
   return JSON.parse(saved);
 }
 
 export function saveUsers(users) {
-  sessionStorage.setItem('mock_users', JSON.stringify(users));
+  localStorage.setItem('mock_users', JSON.stringify(users));
 }

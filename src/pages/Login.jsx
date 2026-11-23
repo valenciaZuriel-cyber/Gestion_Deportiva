@@ -1,24 +1,33 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trophy, Eye, EyeOff } from 'lucide-react';
+import { Trophy } from 'lucide-react';
+// import fetchClient from '../api/fetchClient'; // <-- DESCOMENTAR AL CONECTAR API
 
 const Login = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const sesionExistente = sessionStorage.getItem('sesion_deportes');
-    if (sesionExistente) navigate('/inventario');
-  }, [navigate]);
+    const sesionExistente = localStorage.getItem('sesion_deportes');
+    if (sesionExistente) {
+      navigate('/inventario', { replace: true });
+    }
+  }, []);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.email.trim() || !formData.password.trim()) {
       setError('Por favor complete los campos obligatorios');
@@ -28,6 +37,29 @@ const Login = () => {
     setError('');
     setLoading(true);
 
+    /* =========================================================================
+       CÓDIGO REAL PARA CUANDO EL PROFESOR PASE LA API (DESCOMENTAR ESTE BLOQUE):
+       =========================================================================
+    try {
+      const data = await fetchClient.post('/auth/login', formData);
+      const payload = {
+        email: formData.email,
+        role: data.user?.role || 'USER',
+        accessToken: data.accessToken, // Ajustar a data.token si su API lo llama así
+        refreshToken: data.refreshToken || '',
+        fechaIngreso: new Date().toLocaleTimeString(),
+      };
+      localStorage.setItem('sesion_deportes', JSON.stringify(payload));
+      navigate('/inventario', { replace: true });
+    } catch (err) {
+      setError(err.message || 'Credenciales incorrectas');
+    } finally {
+      setLoading(false);
+    }
+    return;
+    ========================================================================= */
+
+    // SIMULACIÓN TEMPORAL SIN BACKEND (Borrar al activar el bloque de arriba)
     setTimeout(() => {
       const payload = {
         email: formData.email,
@@ -36,139 +68,123 @@ const Login = () => {
         refreshToken: 'mock-jwt-refresh-token',
         fechaIngreso: new Date().toLocaleTimeString(),
       };
-      sessionStorage.setItem('sesion_deportes', JSON.stringify(payload));
+
+      localStorage.setItem('sesion_deportes', JSON.stringify(payload));
       setLoading(false);
-      navigate('/inventario');
+      navigate('/inventario', { replace: true });
     }, 500);
   };
 
   return (
     <div className="auth-wrapper">
-      {/* Panel Izquierdo Rojo Terracota con Trofeo y Balones en líneas blancas */}
       <div className="auth-brand-panel">
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 14 }}>
-          <Trophy size={54} color="#FFFFFF" strokeWidth={2} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+          <Trophy size={48} color="#FFFFFF" strokeWidth={1.8} />
 
-          {/* Dos balones en trazo blanco idénticos a tu Figma */}
-          <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
-            {/* Balón de Básquetbol blanco */}
-            <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+            <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
-              <path d="M2.2 12h19.6" />
-              <path d="M12 2.2v19.6" />
-              <path d="M4.9 4.9a14 14 0 0 1 0 14.2" />
-              <path d="M19.1 4.9a14 14 0 0 0 0 14.2" />
+              <path d="M2.5 12h19" />
+              <path d="M12 2v20" />
+              <path d="M4.9 4.9c4.2 3.8 4.2 10.4 0 14.2" />
+              <path d="M19.1 4.9c-4.2 3.8-4.2 10.4 0 14.2" />
             </svg>
 
-            {/* Balón de Fútbol blanco */}
-            <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
-              <polygon points="12 7 16.5 10.3 14.8 15.5 9.2 15.5 7.5 10.3" />
-              <path d="M12 2v5" />
-              <path d="M21.5 9l-5 1.3" />
-              <path d="M18 20l-3.2-4.5" />
-              <path d="M6 20l3.2-4.5" />
-              <path d="M2.5 9l5 1.3" />
+              <polygon points="12 7.5 16.2 10.6 14.6 15.5 9.4 15.5 7.8 10.6" />
+              <path d="M12 2v5.5" />
+              <path d="M16.2 10.6l5-2.1" />
+              <path d="M14.6 15.5l3.2 4.3" />
+              <path d="M9.4 15.5l-3.2 4.3" />
+              <path d="M7.8 10.6l-5-2.1" />
             </svg>
           </div>
         </div>
 
-        <h1 style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.15 }}>
-          Coordinación
-          <br />
-          Deportiva
-        </h1>
-        <p style={{ fontSize: 13, opacity: 0.9, marginTop: 10 }}>
+        <h1 style={{ fontSize: 30, fontWeight: 700, marginBottom: 8 }}>Coordinación Deportiva</h1>
+        <p style={{ fontSize: 15, opacity: 0.92 }}>
           Gestión de material y espacios deportivos.
         </p>
       </div>
 
-      {/* Panel Derecho Formulario */}
       <div className="auth-form-panel">
-        <div style={{ width: '100%', maxWidth: 400 }}>
-          <form onSubmit={handleSubmit} className="auth-card" style={{ borderRadius: 22 }}>
-            <h2 style={{ textAlign: 'center', fontSize: 20, fontWeight: 700 }}>Iniciar Sesión</h2>
-            <p style={{ textAlign: 'center', fontSize: 12, color: '#3C3737', marginBottom: 26 }}>
-              Ingresa tus datos para acceder al sistema
-            </p>
+        <form onSubmit={handleSubmit} className="auth-card">
+          <h2 style={{ textAlign: 'center', fontSize: 22, marginBottom: 4 }}>Iniciar Sesión</h2>
+          <p style={{ textAlign: 'center', fontSize: 12, color: '#8C8C8C', marginBottom: 22 }}>
+            Ingresa tus datos para acceder al sistema
+          </p>
 
-            {error && <p className="error-text" style={{ marginBottom: 12 }}>{error}</p>}
+          {error && <p className="error-text" style={{ marginBottom: 12 }}>{error}</p>}
 
-            <div className="input-group">
-              <label style={{ fontSize: 12, fontWeight: 500 }}>Correo Electrónico</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="input-control"
-              />
-            </div>
+          <div className="input-group">
+            <label>Correo Electrónico</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="input-control"
+              placeholder="correo@universidad.edu.mx"
+            />
+          </div>
 
-            <div className="input-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label style={{ fontSize: 12, fontWeight: 500 }}>Contraseña</label>
-                <span
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{ fontSize: 11, color: '#8C8C8C', cursor: 'pointer' }}
-                >
-                  {showPassword ? 'Ocultar' : 'Mostrar'}
-                </span>
-              </div>
-
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="input-control"
-                  style={{ width: '100%', paddingRight: 40 }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: 12,
-                    top: 10,
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: '#8C8C8C',
-                  }}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-
-              <div style={{ textAlign: 'right', marginTop: 2 }}>
-                <span style={{ fontSize: 11, color: '#8C8C8C', textDecoration: 'underline', cursor: 'pointer' }}>
-                  Olvidé mi contraseña
-                </span>
-              </div>
-            </div>
-
-            {/* Botón centrado en forma de píldora idéntico a Figma */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 22 }}>
+          <div className="input-group" style={{ marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label>Contraseña</label>
               <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={loading}
-                style={{ width: 210, borderRadius: 24, padding: '12px 24px' }}
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#8C8C8C',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
               >
-                {loading ? 'Validando...' : 'Iniciar Sesión'}
+              {showPassword ? 'Ocultar' : 'Mostrar'}
               </button>
             </div>
-          </form>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              className="input-control"
+              placeholder="••••••••"
+            />
+          </div>
 
-          <p style={{ marginTop: 20, fontSize: 13, textAlign: 'center', color: '#7BB2D0' }}>
+          <div style={{ textAlign: 'right', marginBottom: 22 }}>
+            <a
+              href="#recuperar"
+              onClick={(e) => e.preventDefault()}
+              style={{ fontSize: 12, color: '#8C8C8C', textDecoration: 'underline' }}
+            >
+              Olvidé mi contraseña
+            </a>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading}
+              style={{ width: 210, borderRadius: 24, padding: '12px 24px' }}
+            >
+              {loading ? 'Validando...' : 'Iniciar Sesión'}
+            </button>
+          </div>
+
+          <p style={{ marginTop: 22, fontSize: 13, textAlign: 'center', color: '#8C8C8C' }}>
             ¿No tienes cuenta?{' '}
-            <Link to="/registro" style={{ color: '#7BB2D0', fontWeight: 700, textDecoration: 'underline' }}>
+            <Link to="/registro" style={{ color: '#7BB2D0', fontWeight: 700, textDecoration: 'none' }}>
               Regístrate
             </Link>
           </p>
-        </div>
+        </form>
       </div>
     </div>
   );

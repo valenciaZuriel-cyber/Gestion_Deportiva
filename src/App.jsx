@@ -3,60 +3,34 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Inventory from './pages/Inventory';
 import MyLoans from './pages/MyLoans';
-// import AdminPanel from './pages/AdminPanel'; 
-import SidebarLayout from './components/Sidebar';
+// import AdminPanel from './pages/AdminPanel'; // Descomentar cuando actives Admin
 
-function PrivateRoute({ children, allowedRoles }) {
-  const sesionRaw = sessionStorage.getItem('sesion_deportes');
-  if (!sesionRaw) return <Navigate to="/login" replace />;
+function App() {
+  const estaAutenticado = () => {
+    return localStorage.getItem('sesion_deportes') !== null;
+  };
 
-  const sesion = JSON.parse(sesionRaw);
-  if (allowedRoles && !allowedRoles.includes(sesion.role)) {
-    return <Navigate to="/inventario" replace />;
-  }
-
-  return <SidebarLayout>{children}</SidebarLayout>;
-}
-
-export default function App() {
   return (
     <Routes>
       {/* Rutas Públicas */}
+      <Route path="/" element={<Login />} />
       <Route path="/login" element={<Login />} />
       <Route path="/registro" element={<Register />} />
 
-      {/* Inventario / Catálogo */}
+      {/* Rutas Protegidas directas sin children */}
       <Route
         path="/inventario"
-        element={
-          <PrivateRoute allowedRoles={['USER', 'ADMIN']}>
-            <Inventory />
-          </PrivateRoute>
-        }
+        element={estaAutenticado() ? <Inventory /> : <Navigate to="/login" replace />}
       />
-
-      {/* Mis Solicitudes */}
       <Route
         path="/mis-solicitudes"
-        element={
-          <PrivateRoute allowedRoles={['USER']}>
-            <MyLoans />
-          </PrivateRoute>
-        }
+        element={estaAutenticado() ? <MyLoans /> : <Navigate to="/login" replace />}
       />
 
-      {/* Ruta de Administrador
-      <Route
-        path="/admin"
-        element={
-          <PrivateRoute allowedRoles={['ADMIN']}>
-            <AdminPanel />
-          </PrivateRoute>
-        }
-      />
-      */}
-
+      {/* Ruta por defecto */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }
+
+export default App;
