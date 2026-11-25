@@ -3,23 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Trophy, Eye, EyeOff } from 'lucide-react';
 import apiFetch from '../api/fetchClient';
 
-function obtenerSesionActiva() {
-  try {
-    const raw = localStorage.getItem('sesion_deportes');
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    const token = parsed?.token || parsed?.accessToken;
-    if (!token) return null;
-    return {
-      ...parsed,
-      role: String(parsed?.role || parsed?.rol || 'USER').toUpperCase(),
-    };
-  } catch {
-    localStorage.removeItem('sesion_deportes');
-    return null;
-  }
-}
-
 export default function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -31,14 +14,19 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const sesion = obtenerSesionActiva();
-    if (sesion) {
-      navigate(sesion.role === 'ADMIN' ? '/admin' : '/inventario', { replace: true });
+    try {
+      const sesionRaw = localStorage.getItem('sesion_deportes');
+      if (!sesionRaw) return;
+      const sesion = JSON.parse(sesionRaw);
+      if (sesion?.token || sesion?.accessToken) {
+        navigate(sesion.role === 'ADMIN' ? '/admin' : '/inventario', { replace: true });
+      }
+    } catch {
+      localStorage.removeItem('sesion_deportes');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const handleChange = (e) => {
+const handleChange = (e) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
@@ -98,8 +86,7 @@ export default function Login() {
       setLoading(false);
     }
   };
-
-  return (
+return (
     <div className="auth-wrapper">
       <div className="auth-brand-panel">
         <div
@@ -159,8 +146,7 @@ export default function Login() {
           Gestión de material y espacios deportivos.
         </p>
       </div>
-
-      <div className="auth-form-panel">
+  <div className="auth-form-panel">
         <div style={{ width: '100%', maxWidth: 400 }}>
           <form onSubmit={handleSubmit} className="auth-card" style={{ borderRadius: 22 }}>
             <h2 style={{ textAlign: 'center', fontSize: 20, fontWeight: 700 }}>

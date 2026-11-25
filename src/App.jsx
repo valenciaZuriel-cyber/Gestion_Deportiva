@@ -1,15 +1,17 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Inventory from './pages/Inventory';
 import MyLoans from './pages/MyLoans';
 
-function obtenerSesion() {
+function leerSesionValida() {
   try {
     const raw = localStorage.getItem('sesion_deportes');
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed?.token && !parsed?.accessToken) return null;
+    const token = parsed?.token || parsed?.accessToken;
+    if (!token || typeof token !== 'string') return null;
     return parsed;
   } catch {
     localStorage.removeItem('sesion_deportes');
@@ -17,43 +19,68 @@ function obtenerSesion() {
   }
 }
 
-function App() {
-  const sesion = obtenerSesion();
-  const destinoAutenticado = sesion?.role === 'ADMIN' ? '/admin' : '/inventario';
+export default function App() {
+  const [sesion, setSesion] = useState(() => leerSesionValida());
+  const location = useLocation();
+
+  const sincronizarSesion = useCallback(() => {
+    setSesion(leerSesionValida());
+  }, []);
+
+  useEffect(() => {
+    sincronizarSesion();
+  }, [location.pathname, sincronizarSesion]);
+
+  const estaAutenticado = Boolean(sesion?.token || sesion?.accessToken);
 
   return (
     <Routes>
-      {/* Rutas Públicas */}
       <Route
         path="/"
-        element={sesion ? <Navigate to={destinoAutenticado} replace /> : <Login />}
+        element={
+          estaAutenticado ? (
+            <Navigate to="/inventario" replace />
+          ) : (
+            <Login onLoginSuccess={sincronizarSesion} />
+          )
+        }
       />
       <Route
         path="/login"
-        element={sesion ? <Navigate to={destinoAutenticado} replace /> : <Login />}
+        element={
+          estaAutenticado ? (
+            <Navigate to="/inventario" replace />
+          ) : (
+            <Login onLoginSuccess={sincronizarSesion} />
+          )
+        }
       />
       <Route
         path="/registro"
-        element={sesion ? <Navigate to={destinoAutenticado} replace /> : <Register />}
+        element={
+          estaAutenticado ? <Navigate to="/inventario" replace /> : <Register />
+        }
       />
 
-      {/* Rutas Protegidas */}
       <Route
         path="/inventario"
-        element={sesion ? <Inventory /> : <Navigate to="/login" replace />}
+        element={
+          estaAutenticado ? <Inventory /> : <Navigate to="/login" replace />
+        }
       />
       <Route
         path="/mis-solicitudes"
-        element={sesion ? <MyLoans /> : <Navigate to="/login" replace />}
+        element={
+          estaAutenticado ? <MyLoans /> : <Navigate to="/login" replace />
+        }
       />
 
-      {/* Ruta por defecto */}
       <Route
         path="*"
-        element={<Navigate to={sesion ? destinoAutenticado : '/login'} replace />}
+        element={
+          <Navigate to={estaAutenticado ? '/inventario' : '/login'} replace />
+        }
       />
     </Routes>
   );
 }
-
-export default App;
