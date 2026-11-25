@@ -1,13 +1,47 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, X } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
-import { getItems, saveItems, getLoans, saveLoans } from '../api/mockData';
-// import fetchClient from '../api/fetchClient'; // <-- DESCOMENTAR AL CONECTAR API
+import apiFetch from '../api/fetchClient';
 
 const DEPORTES = ['Todo', 'Fútbol', 'Básquetbol', 'Voleibol', 'Otros'];
+const DEPORTES_PRINCIPALES = ['fútbol', 'futbol', 'básquetbol', 'basquetbol', 'voleibol'];
+
+function normalizarTexto(texto) {
+  return String(texto || '').trim().toLowerCase();
+}
+
+function normalizarItem(raw, index) {
+  const disponible = Number(
+    raw?.cantidadDisponible ?? raw?.disponibles ?? raw?.stockDisponible ?? raw?.cantidad ?? 0
+  );
+  const total = Number(
+    raw?.cantidadTotal ?? raw?.total ?? raw?.stockTotal ?? Math.max(disponible, 0)
+  );
+  const estado = String(raw?.estadoFisico ?? raw?.estado_fisico ?? raw?.estado ?? 'BUENO').toUpperCase();
+
+  return {
+    id: raw?.id ?? raw?._id ?? index + 1,
+    codigo: raw?.codigo ?? raw?.sku ?? `MAT-${index + 1}`,
+    nombre: raw?.nombre ?? raw?.name ?? raw?.titulo ?? 'Artículo deportivo',
+    deporte: raw?.deporte ?? raw?.disciplina ?? raw?.categoria ?? 'Otros',
+    estadoFisico: estado,
+    cantidadDisponible: disponible,
+    cantidadTotal: total,
+  };
+}
+
+function leerSesion() {
+  try {
+    return JSON.parse(localStorage.getItem('sesion_deportes') || '{}');
+  } catch {
+    return {};
+  }
+}
 
 export default function Inventory() {
-  const [items, setItems] = useState(getItems());
+  const [items, setItems] = useState([]);
+  const [loadingItems, setLoadingItems] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
   const [deporte, setDeporte] = useState('Todo');
   const [searchQuery, setSearchQuery] = useState('');
   const [soloDisponibles, setSoloDisponibles] = useState(false);
@@ -15,32 +49,54 @@ export default function Inventory() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [cantidad, setCantidad] = useState(1);
   const [cancha, setCancha] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const sesion = JSON.parse(localStorage.getItem('sesion_deportes') || '{}');
+  const sesion = leerSesion();
+  const isAdmin = sesion.role === 'ADMIN';
 
-  /* =========================================================================
-     CÓDIGO REAL PARA CARGAR INVENTARIO DESDE LA API (DESCOMENTAR ESTE BLOQUE):
-     =========================================================================
-  const cargarInventarioReal = async () => {
+  const cargarInventario = useCallback(async () => {
+    setLoadingItems(true);
+    setErrorMsg('');
     try {
-      const data = await fetchClient.get('/sports/items');
-      setItems(data);
+      const data = await apiFetch.get('/api/sports/items');
+      const lista = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.items)
+          ? data.items
+          : Array.isArray(data?.data)
+            ? data.data
+            : [];
+      setItems(lista.map(normalizarItem));
     } catch (error) {
-      console.error('Error al cargar inventario:', error.message);
+      setErrorMsg(error.message || 'No se pudo cargar el inventario.');
+    } finally {
+      setLoadingItems(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    cargarInventarioReal();
-  }, []);
-  ========================================================================= */
+    cargarInventario();
+  }, [cargarInventario]);
 
   const filteredItems = items.filter((item) => {
-    const matchDeporte = deporte === 'Todo' || item.deporte === deporte;
+    const depItem = normalizarTexto(item.deporte);
+    const depFiltro = normalizarTexto(deporte);
+
+    let matchDeporte = true;
+    if (depFiltro === 'otros') {
+      matchDeporte =
+        depItem === 'otros' ||
+        depItem === 'otro' ||
+        !DEPORTES_PRINCIPALES.some((principal) => depItem.includes(principal));
+    } else if (depFiltro !== 'todo' && depFiltro !== 'todos') {
+      matchDeporte = depItem.includes(depFiltro);
+    }
+
     const matchDisp = !soloDisponibles || item.cantidadDisponible > 0;
     const matchSearch =
       item.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.codigo.toLowerCase().includes(searchQuery.toLowerCase());
+
     return matchDeporte && matchDisp && matchSearch;
   });
 
@@ -48,51 +104,22 @@ export default function Inventory() {
     e.preventDefault();
     if (!cancha.trim() || cantidad < 1 || cantidad > selectedItem.cantidadDisponible) return;
 
-    /* =========================================================================
-       CÓDIGO REAL PARA REGISTRAR PRÉSTAMO EN LA API (DESCOMENTAR ESTE BLOQUE):
-       =========================================================================
+    setSubmitting(true);
     try {
-      await fetchClient.post('/sports/loans', {
+      await apiFetch.post('/api/sports/loans', {
         itemId: selectedItem.id,
         cantidad: Number(cantidad),
-        canchaOActividad: cancha,
+        canchaOActividad: cancha.trim(),
       });
-      await cargarInventarioReal();
+      await cargarInventario();
       setSelectedItem(null);
       setCancha('');
       setCantidad(1);
     } catch (error) {
-      alert(error.message || 'No se pudo solicitar el préstamo');
+      alert(error.message || 'No se pudo solicitar el préstamo.');
+    } finally {
+      setSubmitting(false);
     }
-    return;
-    ========================================================================= */
-
-    // SIMULACIÓN TEMPORAL SIN BACKEND (Borrar al activar el bloque de arriba)
-    const updatedItems = items.map((it) =>
-      it.id === selectedItem.id
-        ? { ...it, cantidadDisponible: it.cantidadDisponible - cantidad }
-        : it
-    );
-    saveItems(updatedItems);
-    setItems(updatedItems);
-
-    const loans = getLoans();
-    const newLoan = {
-      id: Date.now(),
-      itemId: selectedItem.id,
-      itemNombre: selectedItem.nombre,
-      usuarioNombre: sesion.email || 'Estudiante',
-      matricula: 'A01987654',
-      cantidad,
-      canchaOActividad: cancha,
-      fechaSalida: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      estatus: 'ACTIVO',
-    };
-    saveLoans([newLoan, ...loans]);
-
-    setSelectedItem(null);
-    setCancha('');
-    setCantidad(1);
   };
 
   return (
@@ -105,6 +132,8 @@ export default function Inventory() {
 
           <div style={{ position: 'relative', width: 260 }}>
             <input
+              id="buscar-inventario"
+              name="buscarInventario"
               type="text"
               className="input-control"
               style={{ width: '100%', paddingRight: 36, borderRadius: 20 }}
@@ -120,6 +149,7 @@ export default function Inventory() {
           {DEPORTES.map((dep) => (
             <button
               key={dep}
+              type="button"
               className={`chip ${deporte === dep ? 'active' : ''}`}
               style={deporte === dep ? { backgroundColor: '#D07B7B', color: '#FFFFFF' } : {}}
               onClick={() => setDeporte(dep)}
@@ -128,9 +158,14 @@ export default function Inventory() {
             </button>
           ))}
 
-          <label style={{ marginLeft: 'auto', fontSize: 13, display: 'flex', gap: 6, alignItems: 'center', cursor: 'pointer' }}>
+          <label
+            htmlFor="solo-disponibles-check"
+            style={{ marginLeft: 'auto', fontSize: 13, display: 'flex', gap: 6, alignItems: 'center', cursor: 'pointer' }}
+          >
             Solo disponibles
             <input
+              id="solo-disponibles-check"
+              name="soloDisponibles"
               type="checkbox"
               checked={soloDisponibles}
               onChange={(e) => setSoloDisponibles(e.target.checked)}
@@ -138,36 +173,44 @@ export default function Inventory() {
           </label>
         </div>
 
-        <div className="cards-grid">
-          {filteredItems.map((item) => (
-            <div className="item-card" key={item.id}>
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700 }}>{item.nombre}</h3>
-                <span className="item-code">{item.codigo}</span>
-              </div>
+        {loadingItems && <p>Cargando material deportivo...</p>}
+        {errorMsg && <p className="error-text">{errorMsg}</p>}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0' }}>
-                <span style={{ fontSize: 13 }}>
-                  <strong>{item.cantidadDisponible}/{item.cantidadTotal}</strong> Disponibles
-                </span>
-                <span className={`badge badge-${item.estadoFisico.toLowerCase()}`}>
-                  {item.estadoFisico}
-                </span>
-              </div>
+        {!loadingItems && !errorMsg && (
+          <div className="cards-grid">
+            {filteredItems.map((item) => (
+              <div className="item-card" key={item.id}>
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700 }}>{item.nombre}</h3>
+                  <span className="item-code">{item.codigo}</span>
+                </div>
 
-              <button
-                className="btn btn-primary btn-full"
-                disabled={item.cantidadDisponible === 0}
-                onClick={() => {
-                  setSelectedItem(item);
-                  setCantidad(1);
-                }}
-              >
-                {item.cantidadDisponible === 0 ? 'Agotado' : 'Solicitar préstamo'}
-              </button>
-            </div>
-          ))}
-        </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0' }}>
+                  <span style={{ fontSize: 13 }}>
+                    <strong>{item.cantidadDisponible}/{item.cantidadTotal}</strong> Disponibles
+                  </span>
+                  <span className={`badge badge-${item.estadoFisico.toLowerCase()}`}>
+                    {item.estadoFisico}
+                  </span>
+                </div>
+
+                {!isAdmin && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-full"
+                    disabled={item.cantidadDisponible === 0}
+                    onClick={() => {
+                      setSelectedItem(item);
+                      setCantidad(1);
+                    }}
+                  >
+                    {item.cantidadDisponible === 0 ? 'Agotado' : 'Solicitar préstamo'}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {selectedItem && (
           <div className="modal-backdrop">
@@ -192,7 +235,7 @@ export default function Inventory() {
               </span>
 
               <div className="input-group">
-                <label>Cantidad</label>
+                <label htmlFor="cantidad-prestamo">Cantidad</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <button
                     type="button"
@@ -202,7 +245,7 @@ export default function Inventory() {
                   >
                     -
                   </button>
-                  <span style={{ fontWeight: 700, fontSize: 16, minWidth: 24, textAlign: 'center' }}>
+                  <span id="cantidad-prestamo" style={{ fontWeight: 700, fontSize: 16, minWidth: 24, textAlign: 'center' }}>
                     {cantidad}
                   </span>
                   <button
@@ -217,8 +260,10 @@ export default function Inventory() {
               </div>
 
               <div className="input-group">
-                <label>Cancha o Actividad</label>
+                <label htmlFor="cancha-actividad">Cancha o Actividad</label>
                 <input
+                  id="cancha-actividad"
+                  name="canchaOActividad"
                   type="text"
                   required
                   placeholder="Ej. Cancha 2 - Torneo Interno"
@@ -232,8 +277,8 @@ export default function Inventory() {
                 <button type="button" className="btn btn-ghost" onClick={() => setSelectedItem(null)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-success">
-                  Confirmar Préstamo
+                <button type="submit" className="btn btn-success" disabled={submitting}>
+                  {submitting ? 'Enviando...' : 'Confirmar Préstamo'}
                 </button>
               </div>
             </form>

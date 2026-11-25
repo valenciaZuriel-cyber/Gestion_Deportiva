@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getUsers, saveUsers } from '../api/mockData';
+import apiFetch from '../api/fetchClient';
 
-const Register = () => {
+export default function Register() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     nombre: '',
@@ -18,7 +18,7 @@ const Register = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (Object.values(formData).some((v) => !v.trim())) {
       setError('Por favor complete todos los campos obligatorios');
@@ -32,20 +32,20 @@ const Register = () => {
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
-      const users = getUsers();
-      const newUser = {
-        id: Date.now(),
-        nombre: formData.nombre,
-        matricula: formData.matricula,
-        email: formData.email,
-        activo: true,
-        role: 'USER',
-      };
-      saveUsers([...users, newUser]);
-      setLoading(false);
+    try {
+      await apiFetch.post('/api/auth/register', {
+        nombre: formData.nombre.trim(),
+        matricula: formData.matricula.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+      });
+
       navigate('/login');
-    }, 500);
+    } catch (err) {
+      setError(err.message || 'No se pudo completar el registro');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -56,31 +56,65 @@ const Register = () => {
           Regístrate para acceder al sistema
         </p>
 
-        {error && <p className="error-text" style={{ marginBottom: 12 }}>{error}</p>}
+        {error && (
+          <p className="error-text" style={{ marginBottom: 12 }}>
+            {error}
+          </p>
+        )}
 
         <div className="input-group">
           <label>Nombre Completo</label>
-          <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} className="input-control" />
+          <input
+            type="text"
+            name="nombre"
+            value={formData.nombre}
+            onChange={handleChange}
+            className="input-control"
+          />
         </div>
 
         <div className="input-group">
           <label>Matrícula / ID</label>
-          <input type="text" name="matricula" value={formData.matricula} onChange={handleChange} className="input-control" />
+          <input
+            type="text"
+            name="matricula"
+            value={formData.matricula}
+            onChange={handleChange}
+            className="input-control"
+          />
         </div>
 
         <div className="input-group">
           <label>Correo Electrónico</label>
-          <input type="email" name="email" value={formData.email} onChange={handleChange} className="input-control" />
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            className="input-control"
+          />
         </div>
 
         <div className="input-group">
           <label>Contraseña</label>
-          <input type="password" name="password" value={formData.password} onChange={handleChange} className="input-control" />
+          <input
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            className="input-control"
+          />
         </div>
 
         <div className="input-group">
           <label>Confirmar Contraseña</label>
-          <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} className="input-control" />
+          <input
+            type="password"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            className="input-control"
+          />
         </div>
 
         <div style={{ textAlign: 'center', margin: '10px 0 14px' }}>
@@ -102,6 +136,4 @@ const Register = () => {
       </form>
     </div>
   );
-};
-
-export default Register;
+}

@@ -1,21 +1,24 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://proyecto-idgs9-v1.onrender.com';
 const APP_TOKEN = import.meta.env.VITE_API_APP_TOKEN || '';
 
 async function request(endpoint, options = {}) {
   const sesionRaw = localStorage.getItem('sesion_deportes');
-  const sesion = sesionRaw ? JSON.parse(sesionRaw) : {};
+  let sesion = {};
+  try {
+    sesion = sesionRaw ? JSON.parse(sesionRaw) : {};
+  } catch {
+    sesion = {};
+  }
 
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
 
-  // Header 1: Autenticación de la aplicación cliente (x-api-token)
   if (APP_TOKEN) {
     headers['x-api-token'] = APP_TOKEN;
   }
 
-  // Header 2: Autorización del usuario autenticado (Bearer <token>)
   const userToken = sesion.token || sesion.accessToken;
   if (userToken) {
     headers.Authorization = `Bearer ${userToken}`;
@@ -26,19 +29,22 @@ async function request(endpoint, options = {}) {
     headers,
   });
 
-  // Manejo de 401 Unauthorized: limpiar sesión y redirigir a Login
   if (response.status === 401) {
     localStorage.removeItem('sesion_deportes');
-    if (window.location.pathname !== '/login') {
-      window.location.href = '/login';
+    const esLogin = endpoint.includes('/auth/login');
+    if (!esLogin && window.location.pathname !== '/login' && window.location.pathname !== '/') {
+      window.location.replace('/login');
     }
-    throw new Error('Sesión expirada o no autorizada (401).');
+    throw new Error(
+      esLogin
+        ? 'Correo o contraseña incorrectos (401).'
+        : 'Sesión expirada o no autorizada (401).'
+    );
   }
 
-  // Manejo de 403 Forbidden: acceso restringido por rol/permisos
   if (response.status === 403) {
     const forbiddenData = await response.json().catch(() => null);
-    throw new Error(forbiddenData?.message || 'Acceso restringido (403): no tienes permisos para esta acción.');
+    throw new Error(forbiddenData?.message || 'Acceso restringido (403).');
   }
 
   const data = await response.json().catch(() => null);
